@@ -1,11 +1,6 @@
 #pragma once
-#ifdef _WIN32
-#include <SDL.h>
-#include <SDL_gamecontroller.h>
-#else
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_gamecontroller.h>
-#endif
 
 #include <string>
 #include <vector>

@@ -13,7 +13,7 @@ int main(int argc, char * argv[]){
 
     SDL_Window* window = SDL_CreateWindow("SDL Controller Visualizer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                                         1280, 720, SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, 0, 0);
     SDL_Event event;
     bool running = true;
     
@@ -49,7 +49,7 @@ int main(int argc, char * argv[]){
     ImGuiID child_id = 0;
 
     while (running){
-        while(SDL_PollEvent(&event)){
+        while (SDL_PollEvent(&event)){
             ImGui_ImplSDL2_ProcessEvent(&event);
             if (event.type == SDL_QUIT){
                 running = false;
@@ -88,6 +88,7 @@ int main(int argc, char * argv[]){
             controller->pollState();
         }
 
+        SDL_RenderClear(renderer);
         ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
         count = 0;
@@ -338,16 +339,17 @@ int main(int argc, char * argv[]){
             }
         }
         ImGui::End();
+        ImGui::EndFrame();
         ImGui::Render();
 
+        SDL_SetRenderTarget(renderer, NULL);
         SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255);
         SDL_RenderClear(renderer);
         ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
         SDL_RenderPresent(renderer);
-
-
-
     }
+
+
     ImGui_ImplSDLRenderer_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
