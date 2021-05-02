@@ -12,7 +12,7 @@ int main(int argc, char * argv[]){
     SDL_Init(SDL_INIT_VIDEO);
 
     SDL_Window* window = SDL_CreateWindow("SDL Controller Visualizer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                                        1280, 720, SDL_WINDOW_SHOWN);
+                                        1280, 720, SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
     SDL_Event event;
     bool running = true;
@@ -44,6 +44,9 @@ int main(int argc, char * argv[]){
     ImGUIStyle();
     ImGui_ImplSDL2_InitForOpenGL(window, NULL);
     ImGui_ImplSDLRenderer_Init(renderer);
+    int count = 0;
+    int show_controller[8] {0,0,0,0,0,0,0,0};
+    ImGuiID child_id = 0;
 
     while (running){
         while(SDL_PollEvent(&event)){
@@ -58,7 +61,8 @@ int main(int argc, char * argv[]){
                 // If the controller is added, we create an instance. could probably modify this to
                 // handle not adding controllers in the case of it already existing,
                 // but we shouldn't get any error like that.
-                Gamepads.push_back(new SDLGamepad(event.cdevice.which));    
+                Gamepads.push_back(new SDLGamepad(event.cdevice.which));
+                    
             }
 
             if (event.type == SDL_CONTROLLERDEVICEREMOVED){
@@ -86,70 +90,253 @@ int main(int argc, char * argv[]){
 
         ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
-
+        count = 0;
+        ImVec4 color = {.500, .500, .500, 1.0};
+   
         // Down below we're gonna use ImGUI to display controller values for every connected controller. 
         // You can use it as an example of querying through SDLGamepad.
         for (auto controller: Gamepads){
-            ImVec4 pressed = ImVec4(0.0, 1.0, 0.0, 1.0);
-            ImGui::Begin(controller->getName().c_str());
+            count += 1;
+            if (show_controller[count-1]){
+                ImGui::Begin((controller->getName()+": #" + std::to_string(count)).c_str());
+                ImVec4 pressed = ImVec4(0.0, 1.0, 0.0, 1.0);
 
-            // Show number of touchpads if supported.
-            if (controller->getTouchpadCount()){
-                ImGui::Text("Number of touchpads: %i", controller->getTouchpadCount());
+                //Set Controller LED (If supported)
+                if (controller->hasLED()){
+                    std::vector<float> LED_Color = {float(controller->led_color.r) / float(255),
+                                                    float(controller->led_color.g) / float(255), 
+                                                    float(controller->led_color.b) / float(255), 
+                                                        1.0f};
+
+                    ImGui::ColorEdit3("LED Color", LED_Color.data());
+                    controller->led_color.r = LED_Color[0] * 255;
+                    controller->led_color.g = LED_Color[1] * 255;
+                    controller->led_color.b = LED_Color[2] * 255;
+
+                    controller->SetLED(controller->led_color.r, controller->led_color.g, controller->led_color.b);
+                }
+
+                ImGui::NewLine();
+                // Show number of touchpads if supported.
+                if (controller->getTouchpadCount()){
+                    ImGui::Text("Number of touchpads: %i", controller->getTouchpadCount());
+                }
+                
+                // Provide options to enable gyro and accelerometer.
+                if (controller->hasSensors()){
+                    controller->sensorEnabled = true;
+                    if (controller->hasGyroscope()){
+                        ImGui::Checkbox("Gyroscope", &controller->gyroActive);
+                        controller->setSensor(SDL_SENSOR_GYRO, (SDL_bool)controller->gyroActive);
+                    }
+                    if (controller->hasAccelerometer()){
+                        ImGui::Checkbox("Accelerometer", &controller->accelActive);
+                        controller->setSensor(SDL_SENSOR_ACCEL, (SDL_bool)controller->accelActive);
+                    }
+                }
+
+                if (controller->getTouchpadCount()){
+                    ImGui::Checkbox("Touchpad Polling", &controller->queryTouchpads);
+                }
+
+                // Allow controller rumble to be activated.
+                if (controller->hasHaptics()){
+                    ImGui::SliderFloat("Left Motor", &controller->vibration.motor_left, 0, 1, "%.3f", 1.0f);
+                    ImGui::SliderFloat("Right Motor", &controller->vibration.motor_right, 0, 1,"%.3f", 1.0f);
+                    controller->Rumble(controller->vibration.motor_left, controller->vibration.motor_right, 100);   
+                }
+
+                // Allow controller trigger rumble to be activated.
+                if (controller->hasTriggerHaptics()){
+                    ImGui::SliderFloat("Left Trigger Motor", &controller->vibration.trigger_left, 0, 1, "%.3f", 1.0f);
+                    ImGui::SliderFloat("Right Trigger Motor", &controller->vibration.trigger_right, 0, 1,"%.3f", 1.0f);
+                    controller->RumbleTriggers(controller->vibration.trigger_left, controller->vibration.trigger_right, 100);   
+                }
+
+
+                ImGui::NewLine();
+                // Print the face buttons, and color them if pressed.
+                // Using the class, to query buttons you check the state struct.
+                ImGui::TextColored(color, "Face Buttons");
+                if (controller->state.A){
+                    ImGui::TextColored(pressed, "Button A");
+                }else {ImGui::Text("Button A");}
+
+                if (controller->state.B){
+                    ImGui::TextColored(pressed, "Button B");
+                }else {ImGui::Text("Button B");}
+
+                if (controller->state.X){
+                    ImGui::TextColored(pressed, "Button X");
+                }else {ImGui::Text("Button X");}
+
+                if (controller->state.Y){
+                    ImGui::TextColored(pressed, "Button Y");
+                }else {ImGui::Text("Button Y");}
+
+
+                ImGui::NewLine();
+                // Print the DPad Buttons, and color them if they are pressed.   
+                // Using the class, to query buttons you check the state struct.
+                ImGui::TextColored(color, "DPAD Buttons");
+                if (controller->state.DPadUp){
+                    ImGui::TextColored(pressed, "Up");
+                }else {ImGui::Text("Up");}
+
+                if (controller->state.DPadDown){
+                    ImGui::TextColored(pressed, "Down");
+                }else {ImGui::Text("Down");}
+
+                if (controller->state.DPadLeft){
+                    ImGui::TextColored(pressed, "Left");
+                }else {ImGui::Text("Left");}
+
+                if (controller->state.DPadRight){
+                    ImGui::TextColored(pressed, "Right");
+                }else {ImGui::Text("Right");}
+
+
+                ImGui::NewLine();
+                // Print the DPad Buttons, and color them if they are pressed.   
+                // Using the class, to query buttons you check the state struct.
+                ImGui::TextColored(color, "Shoulder Buttons and Stick Clicks");
+                if (controller->state.LeftShoulder){
+                    ImGui::TextColored(pressed, "Left Shoulder");
+                }else {ImGui::Text("Left Shoulder");}
+
+                if (controller->state.RightShoulder){
+                    ImGui::TextColored(pressed, "Right Shoulder");
+                }else {ImGui::Text("Right Shoulder");}
+
+                if (controller->state.LeftStickClick){
+                    ImGui::TextColored(pressed, "Left Stick");
+                }else {ImGui::Text("Left Stick");}
+
+                if (controller->state.RightStickClick){
+                    ImGui::TextColored(pressed, "Right Stick");
+                }else {ImGui::Text("Right Stick");}
+
+
+                ImGui::NewLine();
+                // Print the DPad Buttons, and color them if they are pressed.   
+                // Using the class, to query buttons you check the state struct.
+                ImGui::TextColored(color, "Start, Back, Guide");
+                if (controller->state.Start){
+                    ImGui::TextColored(pressed, "Start");
+                }else {ImGui::Text("Start");}
+
+                if (controller->state.Back){
+                    ImGui::TextColored(pressed, "Back");
+                }else {ImGui::Text("Back");}
+
+                if (controller->state.Guide){
+                    ImGui::TextColored(pressed, "Guide");
+                }else {ImGui::Text("Guide");}
+
+
+                ImGui::NewLine();
+                // Print the Axis values for the Triggers
+                ImGui::TextColored(color, "Left Trigger and Right Trigger");
+                ImGui::Text("Left Trigger: %.3f ,  Right Trigger: %.3f", controller->state.LeftTrigger, controller->state.RightTrigger);
+
+
+                ImGui::NewLine();
+                // Print the Axis values for the Sticks.
+                ImGui::TextColored(color, "Left Stick and Right Stick");
+                ImGui::Text("Left Stick (x: %.3f ,  y: %.3f)", controller->state.LeftStick.x, controller->state.LeftStick.y);
+                ImGui::Text("Right Stick (x: %.3f ,  y: %.3f)", controller->state.RightStick.x, controller->state.RightStick.y);
+
+
+                if (controller->sensorEnabled){
+                    ImGui::NewLine();
+                    // Print the Axis values for the Sticks.
+                    ImGui::TextColored(color, "Gyro and/or Accelerometer");
+                    if (controller->hasGyroscope()){
+                        ImGui::Text("Gyroscope (x: %.3f ,  y: %.3f, z: %.3f)", controller->sensor_state.Gyroscope[0],
+                                                                        controller->sensor_state.Gyroscope[1],
+                                                                        controller->sensor_state.Gyroscope[2]);
+                    }
+                    if (controller->hasAccelerometer()){
+                        ImGui::Text("Accelerometer (x: %.3f ,  y: %.3f, z: %.3f)", controller->sensor_state.Accelerometer[0],
+                                                                        controller->sensor_state.Accelerometer[1],
+                                                                        controller->sensor_state.Accelerometer[2]);
+                    }
+                    
+                }
+
+                ImGui::NewLine();
+                // Print the Paddle Buttons
+                ImGui::TextColored(color, "Paddle Buttons");
+                if (controller->state.Paddle1){
+                    ImGui::TextColored(pressed, "Paddle1");
+                }else {ImGui::Text("Paddle1");}
+
+                if (controller->state.Paddle2){
+                    ImGui::TextColored(pressed, "Paddle2");
+                }else {ImGui::Text("Paddle2");}
+
+                if (controller->state.Paddle3){
+                    ImGui::TextColored(pressed, "Paddle3");
+                }else {ImGui::Text("Paddle3");}
+
+                if (controller->state.Paddle4){
+                    ImGui::TextColored(pressed, "Paddle4");
+                }else {ImGui::Text("Paddle4");}
+
+
+                ImGui::NewLine();
+                // Print the Touchpad, and Misc button (Capture, Mic, and Share button respectively)
+                ImGui::TextColored(color, "Touchpad and Misc");
+                if (controller->state.Touchpad){
+                    ImGui::TextColored(pressed, "Touchpad");
+                }else {ImGui::Text("Touchpad");}
+
+                if (controller->state.Misc){
+                    ImGui::TextColored(pressed, "Misc");
+                }else {ImGui::Text("Misc");}
+
+
+                ImGui::NewLine();
+                // Show Touchpad coordinates.
+                if (controller->getTouchpadCount() && controller->queryTouchpads){
+                    if (ImGui::CollapsingHeader("Touchpads")){
+                        for (int i = 0; i < controller->touchpads.size(); i++){
+                            if (ImGui::CollapsingHeader(("Touchpad: "+ std::to_string(i)).c_str())){
+                                if (ImGui::BeginTable("Fingers", 1)){
+                                    for (int j = 0; j < controller->touchpads[i].fingers.size(); j++){
+                                        ImGui::TableNextColumn();
+                                        ImGui::Text("Finger %i: (x: %f, y: %f, pressure: %f, state: %d)", j, 
+                                                            controller->touchpads[i].fingers[j].x,
+                                                            controller->touchpads[i].fingers[j].y,
+                                                            controller->touchpads[i].fingers[j].pressure,
+                                                            controller->touchpads[i].fingers[j].state);
+                                    }
+                                    
+                                    ImGui::EndTable();
+                                }
+                            }
+                        }
+                   }
+                }
+                ImGui::End();
             }
             
-            // Provide options to enable gyro and accelerometer.
-            if (controller->hasSensors()){
-                if (controller->hasGyroscope()){
-                    ImGui::Checkbox("Gyroscope", &controller->gyroActive);
-                }
-                if (controller->hasAccelerometer()){
-                    ImGui::Checkbox("Accelerometer", &controller->accelActive);
-                }
-            }
-
-            // Allow controller rumble to be activated.
-            if (controller->hasHaptics()){
-                ImGui::SliderFloat("Left Motor", &controller->vibration.motor_left, 0, 1, "%.3f", 1.0f);
-                ImGui::SliderFloat("Right Motor", &controller->vibration.motor_right, 0, 1,"%.3f", 1.0f);
-                controller->Rumble(controller->vibration.motor_left, controller->vibration.motor_right, 100);   
-            }
-
-            // Allow controller trigger rumble to be activated.
-            if (controller->hasTriggerHaptics()){
-                ImGui::SliderFloat("Left Trigger Motor", &controller->vibration.trigger_left, 0, 1, "%.3f", 1.0f);
-                ImGui::SliderFloat("Right Trigger Motor", &controller->vibration.trigger_right, 0, 1,"%.3f", 1.0f);
-                controller->RumbleTriggers(controller->vibration.trigger_left, controller->vibration.trigger_right, 100);   
-            }
-
-            // Print the face buttons, and color them if pressed.
-            // Using the class, to query buttons you check the state struct.
-            if (controller->state.A){
-                ImGui::TextColored(pressed, "Button A");
-            }else {ImGui::Text("Button A");}
-
-            if (controller->state.B){
-                ImGui::TextColored(pressed, "Button B");
-            }else {ImGui::Text("Button B");}
-
-            if (controller->state.X){
-                ImGui::TextColored(pressed, "Button X");
-            }else {ImGui::Text("Button X");}
-
-            if (controller->state.Y){
-                ImGui::TextColored(pressed, "Button Y");
-            }else {ImGui::Text("Button Y");}
-
-            ImGui::NewLine();
-            // Print the DPad Buttons, and color them if they are pressed.
-
-            ImGui::End();
-
+            
         }
-        ImGui::Begin("SDL Game Controller Test App");
+        ImGui::Begin("SDL Game Controller Test/Example App");
         ImGui::Text("This is an application that tests the controllers you have on your system, using SDL2 with a custom class. \n This serves to also be an example of using SDL2 with controller support.");
         ImGui::NewLine();
         ImGui::Text("Number of Controllers: %i", Gamepads.size());
+        for (int i = 0; i < Gamepads.size(); i++ ){
+            if (ImGui::Button(Gamepads[i]->getName().c_str())){
+                if (show_controller[i]){
+                    show_controller[i] = false;
+                }
+                else{
+                    show_controller[i] = true;
+                }
+            }
+        }
         ImGui::End();
         ImGui::Render();
 

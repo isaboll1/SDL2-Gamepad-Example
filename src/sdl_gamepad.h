@@ -5,12 +5,13 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
 
 struct SDLGamepadState{
     // Axis values range from -1.0f to 1.0f
-    struct LeftStickAxis {float x= 0; float y = 0;} LeftStick;
+    struct LeftStickAxis {float x= 0.0f; float y = 0.0f;} LeftStick;
     // Axis values range from -1.0f - 1.0f
-    struct RightStickAxis {float x = 0; float y = 0;} RightStick;
+    struct RightStickAxis {float x = 0.0f; float y = 0.0f;} RightStick;
     int A = 0;
     int B = 0;
     int X = 0;
@@ -71,7 +72,6 @@ struct SDLGamepadTouchpad {
 class SDLGamepad {
 private:
     std::string name = "";
-    std::string serialNumber = "";
     SDL_GameController * controller;
     int touchpadCount = 0;
     bool hapticsSupported = false;
@@ -90,6 +90,7 @@ public:
         float trigger_right = 0.0;
     } vibration;
 
+    SDL_Color led_color{0, 0, 255, 255};
     SDL_JoystickID id;
     SDLGamepadState last_state;
     SDLGamepadState state;
@@ -105,7 +106,6 @@ public:
         controller = SDL_GameControllerOpen(index);
         id = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controller));
         name = SDL_GameControllerName(controller);
-        serialNumber = SDL_GameControllerGetSerial(controller);
         if (SDL_GameControllerRumble(controller, 0, 0, 0) == 0){
             hapticsSupported = true;
         }
@@ -240,13 +240,13 @@ public:
         state.LeftShoulder = SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
         state.RightShoulder = SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
         // Axis values for the left and right stick
-        state.LeftStick.x = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTX) / SDL_JOYSTICK_AXIS_MAX;
-        state.LeftStick.y = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTY) / SDL_JOYSTICK_AXIS_MAX;
-        state.RightStick.x = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTX) / SDL_JOYSTICK_AXIS_MAX;
-        state.RightStick.y = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTY) / SDL_JOYSTICK_AXIS_MAX;
+        state.LeftStick.x = float(SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTX)) / float(SDL_JOYSTICK_AXIS_MAX);
+        state.LeftStick.y = float(SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTY)) / float(SDL_JOYSTICK_AXIS_MAX);
+        state.RightStick.x = float(SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTX)) / float(SDL_JOYSTICK_AXIS_MAX);
+        state.RightStick.y = float(SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTY)) / float(SDL_JOYSTICK_AXIS_MAX);
         //Left and Right Trigger
-        state.LeftTrigger = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT) / SDL_JOYSTICK_AXIS_MAX;
-        state.RightTrigger = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERRIGHT) / SDL_JOYSTICK_AXIS_MAX;
+        state.LeftTrigger = float(SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT)) / float(SDL_JOYSTICK_AXIS_MAX);
+        state.RightTrigger = float(SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERRIGHT)) / float(SDL_JOYSTICK_AXIS_MAX);
 
         if (sensorEnabled){
             if (accelActive){
