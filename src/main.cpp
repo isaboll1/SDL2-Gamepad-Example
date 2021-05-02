@@ -328,7 +328,7 @@ int main(int argc, char * argv[]){
         ImGui::NewLine();
         ImGui::Text("Number of Controllers: %i", Gamepads.size());
         for (int i = 0; i < Gamepads.size(); i++ ){
-            if (ImGui::Button(Gamepads[i]->getName().c_str())){
+            if (ImGui::Button((Gamepads[i]->getName()+" (Index: "+ std::to_string(i) +")").c_str())){
                 if (show_controller[i]){
                     show_controller[i] = false;
                 }
