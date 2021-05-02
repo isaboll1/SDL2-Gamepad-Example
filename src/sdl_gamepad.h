@@ -1,10 +1,7 @@
 #pragma once
 
-#ifdef _WIN32
-#include <SDL.h>
-#else
 #include <SDL2/SDL.h>
-#endif
+#include <SDL2/SDL_gamecontroller.h>
 
 #include <string>
 #include <vector>
@@ -80,22 +77,29 @@ private:
     bool hapticsSupported = false;
     bool triggerHapticsSupported = false;
     bool sensorSupported = false;
-    bool sensing = false;
     bool gyroSupported = false;
-    bool gyroActive = false;
     bool accelSupported = false;
-    bool accelActive = false;
     bool touchpadSupported = false;
-    bool queryTouchpads = false;
-    bool sensorEnabled = false;
 
 public:
+    //Added pureply for the purpose of ImGui.
+    struct VibrationValues{
+        float motor_left = 0.0;
+        float motor_right = 0.0;
+        float trigger_left = 0.0;
+        float trigger_right = 0.0;
+    } vibration;
+
     SDL_JoystickID id;
     SDLGamepadState last_state;
     SDLGamepadState state;
     SDLGamepadSensorState last_sensor_state;
     SDLGamepadSensorState sensor_state;
     std::vector<SDLGamepadTouchpad> touchpads;
+    bool sensorEnabled = false;
+    bool gyroActive = false;
+    bool accelActive = false;
+    bool queryTouchpads = false;
 
     SDLGamepad(int index){
         controller = SDL_GameControllerOpen(index);
@@ -165,6 +169,10 @@ public:
 
     bool hasAllSensors(){
         return hasAccelerometer() && hasGyroscope();
+    }
+
+    bool hasLED(){
+        return SDL_GameControllerHasLED(controller);
     }
 
     void setSensor(SDL_SensorType type, SDL_bool active){
@@ -251,15 +259,17 @@ public:
         pollTouchpad();
     }
 
-    void Rumble(Uint16 left, Uint16 right, Uint32 duration){
+    // left and right values go from 0.0 to 1.0, while duration is in ms.
+    void Rumble(float left, float right, Uint32 duration){
         if (hapticsSupported){
-            SDL_GameControllerRumble(controller, left, right, duration);
+            SDL_GameControllerRumble(controller, 0xFFFF*left, 0xFFFF*right, duration);
         }
     }
 
-    void RumbleTriggers(Uint16 left_trigger, Uint16 right_trigger, Uint32 duration){
+    // left and right trigger values go from 0.0 to 1.0, while duration is in ms.
+    void RumbleTriggers(float left_trigger, float right_trigger, Uint32 duration){
         if (triggerHapticsSupported){
-            SDL_GameControllerRumbleTriggers(controller, left_trigger, right_trigger, duration);
+            SDL_GameControllerRumbleTriggers(controller, 0xFFFF*left_trigger, 0xFFFF*right_trigger, duration);
         }    
     }
 
