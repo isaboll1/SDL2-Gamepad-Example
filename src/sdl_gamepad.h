@@ -1,7 +1,11 @@
 #pragma once
-
+#ifdef _WIN32
+#include <SDL.h>
+#include <SDL_gamecontroller.h>
+#else
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_gamecontroller.h>
+#endif
 
 #include <string>
 #include <vector>
@@ -40,7 +44,7 @@ struct SDLGamepadState{
 };
 
 struct SDLGamepadSensorState {
-    // Taken from SDL_sensor.h
+    // Explaination taken from SDL_sensor.h
     // For game controllers held in front of you,
     // the axes are defined as follows:
     // -X ... +X : left ... right
@@ -82,7 +86,7 @@ private:
     bool touchpadSupported = false;
 
 public:
-    //Added pureply for the purpose of ImGui.
+    //What's below was added pureply for the purpose of ImGui.
     struct VibrationValues{
         float motor_left = 0.0;
         float motor_right = 0.0;
@@ -91,6 +95,7 @@ public:
     } vibration;
 
     SDL_Color led_color{0, 0, 255, 255};
+    //Required stuff is below___________________
     SDL_JoystickID id;
     SDLGamepadState last_state;
     SDLGamepadState state;
