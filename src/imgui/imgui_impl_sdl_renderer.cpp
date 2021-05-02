@@ -514,6 +514,7 @@ namespace
 
 void ImGui_ImplSDLRenderer_Init(SDL_Renderer* renderer)
 {
+	SDL_RenderSetClipRect(renderer, &SDL_Rect());
 	ImGuiIO& io = ImGui::GetIO();
 
 	ImGui::GetStyle().WindowRounding = 0.0f;
@@ -573,9 +574,10 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* drawData)
 			const ImDrawCmd* drawCommand = &commandList->CmdBuffer[cmd_i];
 
 			const Device::ClipRect clipRect = {
-				0,0,
-				static_cast<int>(io.DisplaySize.x),
-				static_cast<int>(io.DisplaySize.y)
+					static_cast<int>(drawCommand->ClipRect.x),
+					static_cast<int>(drawCommand->ClipRect.y),
+					static_cast<int>(drawCommand->ClipRect.z - drawCommand->ClipRect.x),
+					static_cast<int>(drawCommand->ClipRect.w - drawCommand->ClipRect.y)
 			};
 			CurrentDevice->SetClipRect(clipRect);
 
