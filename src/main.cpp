@@ -16,9 +16,14 @@ int main(int argc, char * argv[]){
     SDL_Renderer* renderer = SDL_CreateRenderer(window, 0, 0);
     SDL_Event event;
     bool running = true;
+
+    // Initialize all of the subsystems specific to gamepad support
+    SDL_InitSubSystem(SDL_INIT_SENSOR|SDL_INIT_GAMECONTROLLER|SDL_INIT_HAPTIC);
     
-    // This hint should be set if you want to access the full PS4/PS5 controller features even with bluetooth enabled
+    // This hint should be set if you want to access the full PS4 controller features even with bluetooth enabled.
     SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE, "1");
+    // This hint should be set if you want to access the full PS5 controller features even with bluetooth enabled.
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS5_RUMBLE, "1");
     // By default (from v 2.0.14), SDL2 maps Nintendo Switch Pro controllers to the layout that nintendo usually provides.
     // Since this makes button mappings slightly different, i'll disable this hint so that the layout is in the more standard
     // Xbox-like layout shared across platfoms.
@@ -30,8 +35,7 @@ int main(int argc, char * argv[]){
     // SDL2 allows for Steam controllers to be queried as game controllers, which is the default for how it works. It also can support up to 8 controllers
     // on systems such as Windows and Linux, and can do so for both regular and UWP environments on windows, and from Windows 7-10.
 
-    // Initialize all of the subsystems specific to gamepad support
-    SDL_InitSubSystem(SDL_INIT_SENSOR|SDL_INIT_GAMECONTROLLER|SDL_INIT_HAPTIC);
+    
     // The way that I load controllers and such with the class defined in "sdl_gamepad.h" was meant to be similar to the 
     // way that controllers are loaded and used typically in libraries such as Window.Gaming.Input, whihc means an array/vector for
     // storing controller instances is needed.
@@ -58,11 +62,18 @@ int main(int argc, char * argv[]){
 
             // In order to add controllers, you have to query if controllers have been added on the system.
             if (event.type == SDL_CONTROLLERDEVICEADDED){
-                // If the controller is added, we create an instance. could probably modify this to
+                // If the controller is added, we create an instance. modified this to
                 // handle not adding controllers in the case of it already existing,
-                // but we shouldn't get any error like that.
-                Gamepads.push_back(new SDLGamepad(event.cdevice.which));
-                    
+                bool add_device = true;
+                for (int i = 0; i < int(Gamepads.size()); i++){
+                    if (Gamepads[i]->id == event.cdevice.which){
+                        add_device = false;
+                        break;
+                    }
+                }
+                if (add_device){
+                    Gamepads.push_back(new SDLGamepad(event.cdevice.which));
+                }         
             }
 
             if (event.type == SDL_CONTROLLERDEVICEREMOVED){
