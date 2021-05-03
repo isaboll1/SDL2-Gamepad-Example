@@ -514,7 +514,6 @@ namespace
 
 void ImGui_ImplSDLRenderer_Init(SDL_Renderer* renderer)
 {
-	SDL_RenderSetClipRect(renderer, (SDL_Rect *){});
 	ImGuiIO& io = ImGui::GetIO();
 
 	ImGui::GetStyle().WindowRounding = 0.0f;
